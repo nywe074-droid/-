@@ -1,0 +1,142 @@
+-- ==============================================
+ local Players, RunService = game:GetService("Players"), game:GetService("RunService")
+ local Lp = Players.LocalPlayer
+ local Set = {
+     LockRange = 200,
+     Height = 1.7,
+     MinH = 0.1,
+     MaxH = 5.0,
+     TeamCheck = false
+ }
+ local State = {Enabled = true, MenuOpen = false, Target = nil}
+ -- ========== สร้าง UI ==========
+ local Gui = Instance.new("ScreenGui")
+ Gui.Name = "โก๋เก่าเหล่ากือ"
+ Gui.Parent = Lp:WaitForChild("PlayerGui")
+ -- ปุ่มเปิดปิดระบบ
+ local MainToggle = Instance.new("TextButton")
+ MainToggle.Size = UDim2.new(0, 60, 0, 60)
+ MainToggle.Position = UDim2.new(1, -70, 0, 10)
+ MainToggle.BackgroundColor3 = Color3.fromRGB(60, 180, 80)
+ MainToggle.Text = "✅"
+ MainToggle.TextSize = 28
+ MainToggle.TextColor3 = Color3.fromRGB(255,255,255)
+ MainToggle.Parent = Gui
+ -- ปุ่มล็อคเป้า
+ local AimBtn = Instance.new("TextButton")
+ AimBtn.Size = UDim2.new(0, 85, 0, 85)
+ AimBtn.Position = UDim2.new(1, -100, 1, -130)
+ AimBtn.BackgroundColor3 = Color3.fromRGB(220, 50, 50)
+ AimBtn.Text = "🎯"
+ AimBtn.TextSize = 35
+ AimBtn.Parent = Gui
+ -- กล่องเมนู
+ local Menu = Instance.new("Frame")
+ Menu.Size = UDim2.new(0, 230, 0, 260)
+ Menu.Position = UDim2.new(1, -240, 0.5, -130)
+ Menu.BackgroundColor3 = Color3.fromRGB(20, 20, 35)
+ Menu.BorderSizePixel = 2
+ Menu.BorderColor3 = Color3.fromRGB(200, 80, 255)
+ Menu.Visible = false
+ Menu.Parent = Gui
+ local Title = Instance.new("TextLabel")
+ Title.Size = UDim2.new(1, 0, 0, 50)
+ Title.BackgroundColor3 = Color3.fromRGB(160, 60, 220)
+ Title.Text = "🔥 โก๋เก่าเหล่ากือ"
+ Title.TextColor3 = Color3.fromRGB(255,255,255)
+ Title.Font = Enum.Font.GothamBold
+ Title.TextSize = 18
+ Title.Parent = Menu
+ local Status = Instance.new("TextLabel")
+ Status.Size = UDim2.new(0.9, 0, 0, 35)
+ Status.Position = UDim2.new(0.05, 0, 0.22, 0)
+ Status.BackgroundTransparency = 1
+ Status.Text = "✅ ระบบทำงานอยู่"
+ Status.TextColor3 = Color3.fromRGB(80, 220, 120)
+ Status.TextSize = 14
+ Status.Parent = Menu
+ local HLabel = Instance.new("TextLabel")
+ HLabel.Size = UDim2.new(0.9, 0, 0, 30)
+ HLabel.Position = UDim2.new(0.05, 0, 0.38, 0)
+ HLabel.BackgroundTransparency = 1
+ HLabel.Text = "📏 ความสูงเป้า: "..Set.Height.." ม."
+ HLabel.TextColor3 = Color3.fromRGB(255,255,255)
+ HLabel.TextSize = 14
+ HLabel.Parent = Menu
+ local HInput = Instance.new("TextBox")
+ HInput.Size = UDim2.new(0.9, 0, 0, 45)
+ HInput.Position = UDim2.new(0.05, 0, 0.48, 0)
+ HInput.BackgroundColor3 = Color3.fromRGB(50, 50, 80)
+ HInput.Text = tostring(Set.Height)
+ HInput.TextColor3 = Color3.fromRGB(255,255,255)
+ HInput.TextSize = 16
+ HInput.ClearTextOnFocus = false
+ HInput.Parent = Menu
+ local SaveBtn = Instance.new("TextButton")
+ SaveBtn.Size = UDim2.new(0.9, 0, 0, 45)
+ SaveBtn.Position = UDim2.new(0.05, 0, 0.7, 0)
+ SaveBtn.BackgroundColor3 = Color3.fromRGB(60, 140, 255)
+ SaveBtn.Text = "💾 บันทึกความสูง"
+ SaveBtn.TextColor3 = Color3.fromRGB(255,255,255)
+ SaveBtn.TextSize = 15
+ SaveBtn.Parent = Menu
+ -- ========== ค้นหาเป้า ==========
+ local function GetTarget()
+     local Char = Lp.Character; if not Char then return end
+     local Root = Char:FindFirstChild("HumanoidRootPart"); if not Root then return end
+     local Nearest, Dist = nil, Set.LockRange
+     for _, P in pairs(Players:GetPlayers()) do
+         if P ~= Lp and P.Character then
+             local PR = P.Character:FindFirstChild("HumanoidRootPart")
+             local PH = P.Character:FindFirstChild("Humanoid")
+             if PR and PH then
+                 if Set.TeamCheck and P.Team == Lp.Team then continue end
+                 local D = (Root.Position - PR.Position).Magnitude
+                 if D < Dist then Dist, Nearest = D, P end
+             end
+         end
+     end
+     return Nearest
+ end
+ -- ========== ล็อคเป้า ==========
+ local function ToggleLock()
+     if not State.Enabled then return end
+     State.Target = State.Target and nil or GetTarget()
+     if State.Target then
+         AimBtn.BackgroundColor3 = Color3.fromRGB(50, 200, 100)
+         Status.Text = "✅ ล็อค: "..State.Target.Name
+     else
+         AimBtn.BackgroundColor3 = Color3.fromRGB(220, 50, 50)
+         Status.Text = "✅ ระบบทำงานอยู่"
+     end
+ end
+ -- ========== ตามเป้า ==========
+ RunService.RenderStepped:Connect(function()
+     if State.Enabled and State.Target and State.Target.Character then
+         local R = State.Target.Character:FindFirstChild("HumanoidRootPart")
+         if R then
+             local Cam = workspace.CurrentCamera
+             Cam.CFrame = CFrame.new(Cam.CFrame.Position, R.Position + Vector3.new(0, Set.Height, 0))
+         end
+     end
+ end)
+ -- ========== ปุ่มควบคุม ==========
+ MainToggle.MouseButton1Click:Connect(function()
+     State.Enabled = not State.Enabled
+     State.MenuOpen = State.Enabled and State.MenuOpen or false
+     Menu.Visible = State.MenuOpen
+     MainToggle.Text = State.Enabled and "✅" or "❌"
+     MainToggle.BackgroundColor3 = State.Enabled and Color3.fromRGB(60,180,80) or Color3.fromRGB(180,60,60)
+     Status.Text = State.Enabled and "✅ ระบบทำงานอยู่" or "❌ ระบบปิดอยู่"
+     Status.TextColor3 = State.Enabled and Color3.fromRGB(80,220,120) or Color3.fromRGB(220,80,80)
+     if not State.Enabled then State.Target = nil end
+ end)
+ AimBtn.MouseButton1Click:Connect(ToggleLock)
+ SaveBtn.MouseButton1Click:Connect(function()
+     local N = tonumber(HInput.Text)
+     if N then
+         Set.Height = math.clamp(N, Set.MinH, Set.MaxH)
+         HLabel.Text = "📏 ความสูงเป้า: "..string.format("%.1f", Set.Height).." ม."
+         HInput.Text = tostring(Set.Height)
+     end
+ end)
